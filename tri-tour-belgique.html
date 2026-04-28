@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>♻️ Tri-Tour Belgique – Apprenez à trier vos déchets!</title>
+<style>
+:root{
+  --pmc:#2563eb; --papier:#d97706; --verre:#16a34a;
+  --organique:#92400e; --menager:#4b5563; --recyparc:#dc2626; --bonus:#f59e0b;
+  --dark:#080818; --card:rgba(255,255,255,.08);
+  --radius:16px; --transition:.25s ease;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:radial-gradient(ellipse at 20% 20%,#1a0a3e 0%,#08081a 60%,#001a3e 100%);
+  min-height:100vh;color:#fff;overflow-x:hidden;
+}
+
+/* ── Background floating emojis ── */
+.bg-float{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-float span{
+  position:absolute;font-size:2rem;opacity:.04;
+  animation:floatUp linear infinite;
+}
+@keyframes floatUp{
+  0%{transform:translateY(110vh) rotate(0deg)}
+  100%{transform:translateY(-10vh) rotate(360deg)}
+}
+
+/* ── Header ── */
+header{
+  position:relative;z-index:1;
+  text-align:center;padding:18px 20px 12px;
+  background:rgba(255,255,255,.04);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(12px);
+}
+header h1{
+  font-size:clamp(1.4rem,4vw,2.2rem);
+  background:linear-gradient(90deg,#ffd700,#ff6b6b,#4ecdc4,#ffd700);
+  background-size:200%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shineText 4s linear infinite;
+}
+@keyframes shineText{to{background-position:200%}}
+header p{color:rgba(255,255,255,.55);font-size:.9rem;margin-top:4px}
+
+/* ── Score panel ── */
+.scores{
+  position:relative;z-index:1;
+  display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding:12px 16px;
+}
+.score-chip{
+  background:var(--card);border:1px solid rgba(255,255,255,.12);
+  border-radius:50px;padding:6px 18px;text-align:center;
+  backdrop-filter:blur(6px);transition:var(--transition);
+  min-width:90px;
+}
+.score-chip .lbl{font-size:.68rem;color:rgba(255,255,255,.5);letter-spacing:1px;text-transform:uppercase}
+.score-chip .val{font-size:1.25rem;font-weight:700;color:#ffd700;line-height:1.2}
+.score-chip .val.hot{color:#f87171;animation:hotPulse .8s ease infinite alternate}
+@keyframes hotPulse{from{color:#f87171}to{color:#ffd700}}
+
+/* ── Main layout ── */
+.game{
+  position:relative;z-index:1;
+  max-width:860px;margin:0 auto;
+  display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px 16px 40px;
+}
+
+/* ── Wheel ── */
+.wheel-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px}
+.wheel-outer{
+  position:relative;
+  width:min(380px,84vw);height:min(380px,84vw);
+}
+.pointer{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  font-size:1.8rem;filter:drop-shadow(0 0 8px gold);z-index:5;
+  animation:pointerBob 2s ease-in-out infinite;
+}
+@keyframes pointerBob{0%,100%{top:-18px}50%{top:-12px}}
+
+#wheelCanvas{
+  border-radius:50%;cursor:pointer;
+  box-shadow:0 0 40px rgba(255,215,0,.25),0 0 80px rgba(255,215,0,.08),inset 0 0 0 4px rgba(255,255,255,.1);
+  transition:box-shadow .3s;
+}
+#wheelCanvas:hover{box-shadow:0 0 60px rgba(255,215,0,.4),0 0 100px rgba(255,215,0,.15)}
+
+.spin-btn{
+  background:linear-gradient(135deg,#ffd700,#ff8c00);
+  color:#0a0a1a;border:none;padding:14px 44px;
+  font-size:1.15rem;font-weight:700;border-radius:50px;cursor:pointer;
+  letter-spacing:1.5px;text-transform:uppercase;
+  box-shadow:0 6px 24px rgba(255,165,0,.35);
+  transition:all .25s;
+}
+.spin-btn:hover:not(:disabled){transform:scale(1.06);box-shadow:0 8px 32px rgba(255,165,0,.55)}
+.spin-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.spin-btn.active{animation:spinBtnPulse .4s ease-in-out infinite alternate}
+@keyframes spinBtnPulse{from{transform:scale(1)}to{transform:scale(1.04)}}
+
+/* ── Item card ── */
+.item-card{
+  width:min(380px,90vw);
+  background:var(--card);border:2px solid rgba(255,255,255,.15);
+  border-radius:20px;padding:22px 28px;text-align:center;
+  backdrop-filter:blur(16px);
+  opacity:0;transform:scale(.85) translateY(10px);
+  transition:opacity .4s,transform .4s;
+  pointer-events:none;
+}
+.item-card.show{opacity:1;transform:scale(1) translateY(0);pointer-events:all}
+.item-card .big-emoji{font-size:3.5rem;display:block;margin-bottom:8px;animation:bounceIn .5s ease}
+@keyframes bounceIn{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.item-card .name{font-size:1.35rem;font-weight:700;margin-bottom:4px}
+.item-card .sub{color:rgba(255,255,255,.6);font-size:.88rem}
+.tricky-badge{
+  display:inline-block;background:#f59e0b;color:#0a0a1a;
+  border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+  margin-bottom:6px;animation:trickyFlash 1s ease infinite alternate;
+}
+@keyframes trickyFlash{from{background:#f59e0b}to{background:#ef4444}}
+
+/* Timer bar */
+.timer-wrap{margin-top:14px;width:100%}
+.timer-track{height:7px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+.timer-fill{height:100%;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);border-radius:4px;transition:width .1s linear;width:100%}
+.timer-secs{text-align:right;font-size:.75rem;color:rgba(255,255,255,.45);margin-top:3px}
+
+/* ── Bins grid ── */
+.bins-section{width:100%}
+.bins-label{text-align:center;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px}
+.bins-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+
+.bin{
+  background:var(--card);border:2px solid rgba(255,255,255,.1);
+  border-radius:var(--radius);padding:14px 8px;text-align:center;
+  cursor:pointer;transition:all .22s;user-select:none;
+}
+.bin:hover:not(.disabled){
+  background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);
+  transform:translateY(-4px);
+}
+.bin.disabled{cursor:not-allowed;opacity:.45;transform:none}
+.bin.correct{background:rgba(34,197,94,.25)!important;border-color:#22c55e!important;animation:correctJump .4s ease}
+.bin.wrong{background:rgba(239,68,68,.25)!important;border-color:#ef4444!important;animation:shake .4s ease}
+.bin.reveal{animation:revealPulse 1.2s ease 3}
+
+@keyframes correctJump{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes revealPulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 6px rgba(255,215,0,.4)}}
+
+.bin-icon{font-size:2.2rem;display:block;margin-bottom:6px}
+.bin-name{font-size:.82rem;font-weight:700;line-height:1.2}
+.bin-sub{font-size:.68rem;color:rgba(255,255,255,.45);margin-top:3px;line-height:1.3}
+
+/* ── Feedback modal ── */
+.backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;
+  opacity:0;pointer-events:none;transition:opacity .3s;backdrop-filter:blur(4px);
+}
+.backdrop.show{opacity:1;pointer-events:all}
+
+.modal{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.9);
+  background:rgba(15,15,40,.95);border:2px solid rgba(255,255,255,.15);
+  border-radius:24px;padding:30px 36px;text-align:center;z-index:200;
+  max-width:min(440px,92vw);width:100%;
+  opacity:0;pointer-events:none;transition:all .3s;
+  backdrop-filter:blur(20px);
+}
+.modal.show{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1)}
+.modal.correct-modal{border-color:#22c55e}
+.modal.wrong-modal{border-color:#ef4444}
+
+.modal-emoji{font-size:3rem;display:block;margin-bottom:8px}
+.modal-title{font-size:1.5rem;font-weight:700;margin-bottom:10px}
+.modal-desc{color:rgba(255,255,255,.8);line-height:1.55;font-size:.95rem;margin-bottom:12px}
+.fun-fact{
+  background:rgba(255,255,255,.06);border-left:3px solid #ffd700;
+  padding:10px 14px;border-radius:0 10px 10px 0;
+  font-size:.83rem;color:rgba(255,255,255,.65);text-align:left;margin-bottom:16px;
+}
+.modal-btn{
+  background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+  color:#fff;border:none;padding:12px 32px;
+  font-size:1rem;font-weight:700;border-radius:50px;cursor:pointer;transition:all .25s;
+}
+.modal-btn:hover{transform:scale(1.06)}
+
+/* ── Bonus popup ── */
+.bonus-pop{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .4s;
+}
+.bonus-pop.show{opacity:1;pointer-events:all}
+.bonus-inner{
+  background:linear-gradient(135deg,#b45309,#ffd700,#b45309);
+  border-radius:24px;padding:40px 54px;text-align:center;color:#0a0a1a;
+  animation:bonusBounce .5s ease;
+  box-shadow:0 0 60px rgba(255,215,0,.5);
+}
+@keyframes bonusBounce{
+  0%{transform:scale(0) rotate(-15deg)}
+  70%{transform:scale(1.08) rotate(4deg)}
+  100%{transform:scale(1) rotate(0)}
+}
+.bonus-inner h2{font-size:2.4rem;font-weight:900;margin-bottom:6px}
+.bonus-inner p{font-size:1.1rem;margin-bottom:20px}
+.bonus-btn{
+  background:#0a0a1a;color:#ffd700;border:2px solid #0a0a1a;
+  padding:12px 32px;font-size:1rem;font-weight:700;border-radius:50px;cursor:pointer;transition:all .25s;
+}
+.bonus-btn:hover{background:#1a1a3a}
+
+/* ── Game over ── */
+.gameover{
+  position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(12px);
+}
+.gameover.show{display:flex}
+.go-card{
+  background:rgba(20,20,50,.95);border:2px solid rgba(255,255,255,.15);
+  border-radius:24px;padding:38px 48px;text-align:center;
+  max-width:min(420px,92vw);width:100%;
+  box-shadow:0 0 60px rgba(100,100,255,.2);
+}
+.go-card h2{font-size:1.9rem;margin-bottom:6px}
+.go-score{font-size:2.5rem;font-weight:900;color:#ffd700;margin:10px 0}
+.go-stats{
+  background:rgba(255,255,255,.05);border-radius:12px;padding:14px;margin:16px 0;
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+.go-stat{text-align:center}
+.go-stat .sv{font-size:1.2rem;font-weight:700;color:#a5f3fc}
+.go-stat .sk{font-size:.75rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px}
+.restart-btn{
+  background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;
+  padding:14px 40px;font-size:1.05rem;font-weight:700;border-radius:50px;cursor:pointer;
+  transition:all .25s;box-shadow:0 5px 20px rgba(34,197,94,.35);margin-top:4px;
+}
+.restart-btn:hover{transform:scale(1.06);box-shadow:0 7px 28px rgba(34,197,94,.55)}
+.guide-link{display:inline-block;margin-top:12px;color:#60a5fa;font-size:.84rem;text-decoration:none}
+.guide-link:hover{text-decoration:underline}
+
+/* ── Tutorial ── */
+.tutorial{
+  position:fixed;inset:0;background:rgba(5,5,20,.96);z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(10px);
+}
+.tut-card{
+  background:rgba(20,20,50,.95);border:2px solid rgba(255,215,0,.3);
+  border-radius:24px;padding:36px 40px;max-width:min(500px,92vw);width:100%;
+  text-align:center;
+}
+.tut-card h2{
+  font-size:1.7rem;font-weight:900;margin-bottom:8px;
+  background:linear-gradient(90deg,#ffd700,#ff6b6b,#4ecdc4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.tut-card p{color:rgba(255,255,255,.65);margin-bottom:20px;font-size:.93rem}
+.tut-steps{text-align:left;margin-bottom:20px;display:flex;flex-direction:column;gap:10px}
+.tut-step{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(255,255,255,.05);border-radius:12px;padding:11px 14px;
+  font-size:.9rem;
+}
+.tut-step .num{
+  background:linear-gradient(135deg,#ffd700,#ff8c00);color:#0a0a1a;
+  width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:.85rem;flex-shrink:0;
+}
+.cats{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:22px}
+.cat-pill{
+  padding:5px 12px;border-radius:20px;font-size:.75rem;font-weight:700;
+  color:#fff;border:1px solid rgba(255,255,255,.2);
+}
+.start-btn{
+  background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;
+  padding:15px 50px;font-size:1.15rem;font-weight:700;border-radius:50px;cursor:pointer;
+  transition:all .25s;box-shadow:0 6px 24px rgba(34,197,94,.4);
+}
+.start-btn:hover{transform:scale(1.06)}
+
+/* ── Particles ── */
+.pt{
+  position:fixed;pointer-events:none;z-index:999;
+  font-size:1.4rem;animation:ptFly .9s ease-out forwards;
+}
+@keyframes ptFly{
+  0%{opacity:1;transform:translate(0,0) scale(1)}
+  100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}
+}
+
+/* ── Combo pop ── */
+.combo-pop{
+  position:fixed;left:50%;transform:translateX(-50%);
+  font-size:1.8rem;font-weight:900;color:#ffd700;
+  text-shadow:0 0 20px rgba(255,215,0,.8);pointer-events:none;z-index:990;
+  animation:comboPop 1s ease-out forwards;
+}
+@keyframes comboPop{
+  0%{opacity:1;transform:translateX(-50%) translateY(0) scale(.8)}
+  40%{opacity:1;transform:translateX(-50%) translateY(-40px) scale(1.2)}
+  100%{opacity:0;transform:translateX(-50%) translateY(-80px) scale(.9)}
+}
+
+/* ── Responsive ── */
+@media(max-width:500px){
+  .bins-grid{grid-template-columns:repeat(2,1fr)}
+  .tut-card{padding:24px 20px}
+  .go-card{padding:28px 24px}
+  .modal{padding:24px 22px}
+}
+@media(max-width:360px){
+  .bins-grid{grid-template-columns:1fr 1fr}
+  .bin-icon{font-size:1.8rem}
+}
+</style>
+</head>
+<body>
+
+<!-- Floating background -->
+<div class="bg-float" id="bgFloat"></div>
+
+<!-- ═══ TUTORIAL ═══ -->
+<div class="tutorial" id="tutorial">
+  <div class="tut-card">
+    <div style="font-size:3.5rem;margin-bottom:8px">♻️</div>
+    <h2>Tri-Tour Belgique</h2>
+    <p>Tournez la roue, identifiez le déchet, choisissez la bonne poubelle!<br>Gagnez des combos et battez votre record!</p>
+    <div class="tut-steps">
+      <div class="tut-step"><div class="num">1</div> Appuyez sur <strong>&nbsp;🎰 Tourner la Roue&nbsp;</strong> pour obtenir un déchet aléatoire</div>
+      <div class="tut-step"><div class="num">2</div> Choisissez la <strong>&nbsp;bonne poubelle&nbsp;</strong> avant la fin du timer (15s)</div>
+      <div class="tut-step"><div class="num">3</div> Enchaînez des réponses correctes pour un <strong>&nbsp;multiplicateur x2, x3…&nbsp;</strong></div>
+      <div class="tut-step"><div class="num">⭐</div> Tombez sur le secteur <strong>&nbsp;BONUS!&nbsp;</strong> pour des points bonus gratuits 🎉</div>
+      <div class="tut-step"><div class="num">⚠️</div> Les cases <em style="color:#f59e0b">&nbsp;ATTENTION PIÈGE&nbsp;</em> sont des déchets contre-intuitifs!</div>
+    </div>
+    <div class="cats">
+      <span class="cat-pill" style="background:#2563eb">🔵 Sac bleu PMC</span>
+      <span class="cat-pill" style="background:#d97706">🟡 Papiers-cartons</span>
+      <span class="cat-pill" style="background:#16a34a">🟢 Bulles à verre</span>
+      <span class="cat-pill" style="background:#92400e">🟤 Déchets organiques</span>
+      <span class="cat-pill" style="background:#4b5563">⚫ Ordures ménagères</span>
+      <span class="cat-pill" style="background:#dc2626">🔴 Recyparc</span>
+    </div>
+    <button class="start-btn" onclick="startGame()">🚀 Jouer maintenant!</button>
+    <div style="margin-top:14px;font-size:.78rem;color:rgba(255,255,255,.35)">Règles de tri valables pour la zone INBW – Brabant wallon</div>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <h1>♻️ Tri-Tour Belgique</h1>
+  <p>Tournez la roue · Triez les déchets · Sauvez la planète!</p>
+</header>
+
+<!-- ═══ SCORES ═══ -->
+<div class="scores">
+  <div class="score-chip">
+    <div class="lbl">Score</div>
+    <div class="val" id="scoreVal">0</div>
+  </div>
+  <div class="score-chip">
+    <div class="lbl">Meilleur</div>
+    <div class="val" id="highVal">0</div>
+  </div>
+  <div class="score-chip">
+    <div class="lbl">Combo</div>
+    <div class="val" id="comboVal">×1</div>
+  </div>
+  <div class="score-chip">
+    <div class="lbl">Vies</div>
+    <div class="val" id="livesVal" style="letter-spacing:2px">❤️❤️❤️</div>
+  </div>
+  <div class="score-chip" id="bonusChip" style="display:none;border-color:gold">
+    <div class="lbl" style="color:#ffd700">Bonus actif</div>
+    <div class="val" id="bonusRoundsVal" style="color:#ffd700">×2 (3)</div>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div class="game">
+
+  <!-- Wheel -->
+  <div class="wheel-wrap">
+    <div class="wheel-outer">
+      <div class="pointer">▼</div>
+      <canvas id="wheelCanvas" onclick="spinWheel()"></canvas>
+    </div>
+    <button class="spin-btn" id="spinBtn" onclick="spinWheel()">🎰 Tourner la Roue!</button>
+  </div>
+
+  <!-- Item card -->
+  <div class="item-card" id="itemCard">
+    <span class="big-emoji" id="itemEmoji">🤔</span>
+    <div id="trickyBadge" class="tricky-badge" style="display:none">⚠️ ATTENTION PIÈGE!</div>
+    <div class="name" id="itemName">–</div>
+    <div class="sub" id="itemSub">Dans quelle poubelle dois-je aller?</div>
+    <div class="timer-wrap" id="timerWrap" style="display:none">
+      <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+      <div class="timer-secs" id="timerSecs">15s</div>
+    </div>
+  </div>
+
+  <!-- Bins -->
+  <div class="bins-section">
+    <div class="bins-label">↓ Choisissez la bonne poubelle ↓</div>
+    <div class="bins-grid">
+      <div class="bin disabled" id="bin-pmc" onclick="pickBin('pmc')">
+        <span class="bin-icon">🔵</span>
+        <div class="bin-name">Sac Bleu PMC</div>
+        <div class="bin-sub">Plastiques · Métaux · Cartons à boissons</div>
+      </div>
+      <div class="bin disabled" id="bin-papier" onclick="pickBin('papier')">
+        <span class="bin-icon">🟡</span>
+        <div class="bin-name">Conteneur Jaune</div>
+        <div class="bin-sub">Papiers & Cartons propres</div>
+      </div>
+      <div class="bin disabled" id="bin-verre" onclick="pickBin('verre')">
+        <span class="bin-icon">🟢</span>
+        <div class="bin-name">Bulle à Verre</div>
+        <div class="bin-sub">Verre d'emballage uniquement</div>
+      </div>
+      <div class="bin disabled" id="bin-organique" onclick="pickBin('organique')">
+        <span class="bin-icon">🟤</span>
+        <div class="bin-name">Déchets Organiques</div>
+        <div class="bin-sub">Restes alim. · Déchets de cuisine</div>
+      </div>
+      <div class="bin disabled" id="bin-menager" onclick="pickBin('menager')">
+        <span class="bin-icon">⚫</span>
+        <div class="bin-name">Ordures Ménagères</div>
+        <div class="bin-sub">Sac blanc/gris – ce qui reste</div>
+      </div>
+      <div class="bin disabled" id="bin-recyparc" onclick="pickBin('recyparc')">
+        <span class="bin-icon">🔴</span>
+        <div class="bin-name">Recyparc</div>
+        <div class="bin-sub">Dangereux · Encombrants · DEEE</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /game -->
+
+<!-- ═══ FEEDBACK MODAL ═══ -->
+<div class="backdrop" id="backdrop" onclick="closeFeedback()"></div>
+<div class="modal" id="feedModal">
+  <span class="modal-emoji" id="fbEmoji">✅</span>
+  <div class="modal-title" id="fbTitle">Bravo!</div>
+  <div class="modal-desc" id="fbDesc">–</div>
+  <div class="fun-fact" id="fbFact"></div>
+  <button class="modal-btn" onclick="closeFeedback()">Continuer ➜</button>
+</div>
+
+<!-- ═══ BONUS POPUP ═══ -->
+<div class="bonus-pop" id="bonusPop">
+  <div class="bonus-inner">
+    <div style="font-size:4rem">🎉</div>
+    <h2>BONUS!</h2>
+    <p id="bonusText">+300 points!</p>
+    <button class="bonus-btn" onclick="closeBonus()">Super! 🎊</button>
+  </div>
+</div>
+
+<!-- ═══ GAME OVER ═══ -->
+<div class="gameover" id="gameOver">
+  <div class="go-card">
+    <div style="font-size:3.5rem;margin-bottom:4px">🏁</div>
+    <h2>Partie terminée!</h2>
+    <div class="go-score" id="goScore">0</div>
+    <div class="go-stats">
+      <div class="go-stat"><div class="sv" id="goHigh">0</div><div class="sk">Record</div></div>
+      <div class="go-stat"><div class="sv" id="goAccuracy">–%</div><div class="sk">Précision</div></div>
+      <div class="go-stat"><div class="sv" id="goCombo">×1</div><div class="sk">Meilleur combo</div></div>
+      <div class="go-stat"><div class="sv" id="goQuestions">0</div><div class="sk">Questions</div></div>
+    </div>
+    <p style="color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:14px">Continuez à vous entraîner pour devenir champion du tri!</p>
+    <button class="restart-btn" onclick="restartGame()">🔄 Rejouer!</button>
+    <br>
+    <a class="guide-link" href="https://dechets.inbw.be/le-guide-du-tri" target="_blank">📚 Consulter le guide INBW →</a>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════ */
+const CAT = {
+  pmc:       { label:'Sac Bleu PMC',       color:'#2563eb', dark:'#1e40af', icon:'🔵' },
+  papier:    { label:'Conteneur Jaune',     color:'#d97706', dark:'#92400e', icon:'🟡' },
+  verre:     { label:'Bulle à Verre',       color:'#16a34a', dark:'#14532d', icon:'🟢' },
+  organique: { label:'Déchets Organiques',  color:'#92400e', dark:'#78350f', icon:'🟤' },
+  menager:   { label:'Ordures Ménagères',   color:'#4b5563', dark:'#1f2937', icon:'⚫' },
+  recyparc:  { label:'Recyparc',            color:'#dc2626', dark:'#991b1b', icon:'🔴' },
+  bonus:     { label:'BONUS',               color:'#f59e0b', dark:'#b45309', icon:'⭐' },
+};
+
+const ITEMS = [
+  // ── PMC ──
+  { e:'🧴', n:"Bouteille d'eau",          c:'pmc',
+    d:"Les bouteilles en plastique se jettent dans le <b>sac bleu PMC</b>, bien vidées.",
+    f:"💡 Depuis 2023, TOUS les emballages plastiques, même souples, vont dans le sac bleu PMC!" },
+  { e:'🥤', n:"Canette de boisson",        c:'pmc',
+    d:"Les canettes (alu ou acier) bien vidées → <b>sac bleu PMC</b>.",
+    f:"💡 Recycler une canette d'alu économise 95% de l'énergie nécessaire à en fabriquer une neuve!" },
+  { e:'🍼', n:"Brique de lait (Tetra Pak)", c:'pmc',
+    d:"Les briques alimentaires (jus, lait…) → <b>sac bleu PMC</b>.",
+    f:"💡 Une brique Tetra Pak est composée de 3 matériaux: carton, alu et plastique!" },
+  { e:'🥫', n:"Boîte de conserve vidée",   c:'pmc',
+    d:"Les boîtes de conserve bien vidées → <b>sac bleu PMC</b>. Pas besoin de les rincer parfaitement!",
+    f:"💡 L'acier des conserves est recyclable à l'infini sans perte de qualité." },
+  { e:'🧴', n:"Flacon de shampoing",       c:'pmc',
+    d:"Les flacons en plastique de produits ménagers → <b>sac bleu PMC</b>.",
+    f:"💡 Pas besoin de les rincer: juste vider suffit avant de les mettre en PMC." },
+  { e:'💨', n:"Aérosol cosmétique (vide)", c:'pmc',
+    d:"Les aérosols alimentaires et cosmétiques (déodorant, chantilly…) → <b>sac bleu PMC</b>.",
+    f:"💡 Attention: les aérosols de produits corrosifs/toxiques vont au Recyparc!" },
+  { e:'🍱', n:"Barquette en plastique",    c:'pmc',
+    d:"Les barquettes en plastique (toutes sortes) → <b>sac bleu PMC</b>.",
+    f:"💡 Même les barquettes de frigolite (polystyrène extrudé) pour viande/poisson!" },
+  { e:'☕', n:"Capsule Nespresso/Dolce",   c:'pmc',
+    d:"Les capsules en plastique ou métal de café → <b>sac bleu PMC</b>.",
+    f:"💡 Les Belges consomment des milliards de capsules par an. Triez-les!" },
+  { e:'🍶', n:"Berlingot de jus",          c:'pmc',
+    d:"Les petits berlingots → <b>sac bleu PMC</b>.",
+    f:"💡 Écrasez-les pour économiser de la place dans votre sac!" },
+  { e:'🧀', n:"Emballage de fromage",      c:'pmc',
+    d:"Les emballages souples de fromage → <b>sac bleu PMC</b>.",
+    f:"💡 Les sachets de charcuterie, chips et snacks aussi!" },
+  { e:'🥬', n:"Sachet de légumes (souple)", c:'pmc',
+    d:"Les sachets plastiques souples d'aliments → <b>sac bleu PMC</b>.",
+    f:"💡 Depuis la nouvelle règle belge, TOUS les plastiques d'emballage sont acceptés en PMC!" },
+  { e:'🛁', n:"Flacon de gel douche",      c:'pmc',
+    d:"Les flacons de gel douche, bain moussant → <b>sac bleu PMC</b>.",
+    f:"💡 Les bouchons restent sur les flacons, pas besoin de les enlever." },
+  { e:'🥚', n:"Boîte à œufs frigolite",    c:'pmc',
+    d:"La boîte à œufs EN FRIGOLITE (mousse blanche) → <b>sac bleu PMC</b>.",
+    f:"💡 Attention: la version EN CARTON va dans le conteneur jaune!", tricky:true },
+  { e:'🪣', n:"Bidon plastique < 8L (sûr)", c:'pmc',
+    d:"Les bidons de moins de 8L sans pictogramme de danger → <b>sac bleu PMC</b>.",
+    f:"💡 Si le bidon a un pictogramme danger ou fait + de 8L → Recyparc!" },
+
+  // ── PAPIER ──
+  { e:'🥣', n:"Boîte de céréales",         c:'papier',
+    d:"Les boîtes de céréales en carton non souillé → <b>conteneur jaune</b>.",
+    f:"💡 Retirez le sachet plastique intérieur et mettez-le dans le sac PMC!" },
+  { e:'📰', n:"Journal / Magazine",         c:'papier',
+    d:"Les journaux et magazines → <b>collecte papiers-cartons</b> (conteneur jaune).",
+    f:"💡 Recycler une tonne de papier économise 17 arbres et 26.000 litres d'eau!" },
+  { e:'📦', n:"Carton propre et sec",       c:'papier',
+    d:"Le carton non souillé, aplati → <b>conteneur jaune</b>.",
+    f:"💡 Aplatissez les boîtes: ça prend 6x moins de place dans le conteneur!" },
+  { e:'✉️', n:"Enveloppe en papier",        c:'papier',
+    d:"Les enveloppes (avec ou sans fenêtre plastique) → <b>conteneur jaune</b>.",
+    f:"💡 La fenêtre plastique peut rester: les centres de tri savent la gérer." },
+  { e:'🧺', n:"Carton de poudre à lessive", c:'papier',
+    d:"Le carton de lessive en poudre → <b>conteneur jaune</b>.",
+    f:"💡 La Belgique est l'un des meilleurs pays d'Europe pour le recyclage du papier!" },
+  { e:'📄', n:"Dépliant publicitaire",      c:'papier',
+    d:"Les dépliants et prospectus → <b>conteneur jaune / collecte papiers-cartons</b>.",
+    f:"💡 Les journaux gratuits, annuaires et catalogues aussi!" },
+  { e:'🥚', n:"Boîte à œufs EN CARTON",   c:'papier',
+    d:"La boîte à œufs EN CARTON → <b>conteneur jaune</b>.",
+    f:"💡 La version en frigolite (mousse blanche) va dans le sac PMC!", tricky:true },
+
+  // ── VERRE ──
+  { e:'🍷', n:"Bouteille de vin",           c:'verre',
+    d:"Les bouteilles en verre (sans bouchon ni couvercle) → <b>bulle à verre</b>.",
+    f:"💡 Le verre est recyclable à 100% et à l'infini sans perte de qualité!" },
+  { e:'🍺', n:"Bouteille de bière",         c:'verre',
+    d:"Les bouteilles de bière en verre → <b>bulle à verre</b>.",
+    f:"💡 La Belgique recycle plus de 97% de son verre d'emballage. Bravo!" },
+  { e:'🫙', n:"Bocal en verre (sans couvercle)", c:'verre',
+    d:"Les bocaux en verre (confiture, cornichons…) → <b>bulle à verre</b>.",
+    f:"💡 Le couvercle métallique va dans le sac bleu PMC!" },
+  { e:'🌸', n:"Bouteille de parfum VIDE",   c:'verre',
+    d:"La bouteille de parfum VIDE en verre → <b>bulle à verre</b>.",
+    f:"💡 La bouteille PLEINE ou à moitié pleine va dans les ordures ménagères!", tricky:true },
+
+  // ── ORGANIQUE ──
+  { e:'🥕', n:"Épluchures de légumes",      c:'organique',
+    d:"Toutes les épluchures de fruits et légumes → <b>déchets organiques</b>.",
+    f:"💡 Les déchets organiques deviennent du compost pour l'agriculture belge!" },
+  { e:'☕', n:"Marc de café + filtre",       c:'organique',
+    d:"Le marc de café avec son filtre papier → <b>déchets organiques</b>.",
+    f:"💡 Le marc de café est un excellent engrais naturel pour les plantes!" },
+  { e:'🍽️', n:"Restes de repas (nourriture)", c:'organique',
+    d:"Tous les restes alimentaires → <b>sac/conteneur de déchets organiques</b>.",
+    f:"💡 Les déchets organiques représentent 30% du contenu de notre poubelle!" },
+  { e:'🥚', n:"Coquilles d'œufs",           c:'organique',
+    d:"Les coquilles d'œufs → <b>déchets organiques</b>.",
+    f:"💡 Elles enrichissent le compost en calcium et facilitent le drainage!" },
+  { e:'🍃', n:"Feuilles mortes",            c:'organique',
+    d:"Les feuilles mortes et déchets végétaux de jardin → <b>déchets organiques</b>.",
+    f:"💡 Vous pouvez aussi les déposer dans le conteneur 'déchets verts' au Recyparc." },
+  { e:'🧻', n:"Essuie-tout (sopalin) usagé", c:'organique',
+    d:"L'essuie-tout (sopalin) usagé → <b>déchets organiques</b>. (Pas dans le papier!)",
+    f:"💡 Le sopalin souillé n'est PAS recyclable: il va en organique, pas en papier-carton!", tricky:true },
+  { e:'🍫', n:"Emballage beurre EN PAPIER PARAFINÉ", c:'organique',
+    d:"L'emballage de beurre en papier paraffiné → <b>déchets organiques</b>.",
+    f:"💡 Différence clé: papier paraffiné → organique; papier aluminisé → ordures ménagères!", tricky:true },
+  { e:'☕', n:"Capsule café compostable (Senseo)", c:'organique',
+    d:"Les capsules compostables type Senseo → <b>déchets organiques</b>.",
+    f:"💡 Seulement les capsules CERTIFIÉES compostables! Les autres vont en PMC.", tricky:true },
+  { e:'🌿', n:"Gazon tondu / déchets verts", c:'organique',
+    d:"Le gazon tondu et petits déchets verts → <b>déchets organiques</b>.",
+    f:"💡 Pour les grosses branches, direction le Recyparc (conteneur 'déchets verts')." },
+  { e:'🎋', n:"Carton alimentaire souillé",  c:'organique',
+    d:"Le carton imbibé de nourriture (beurre, sauce…) → <b>déchets organiques</b>.",
+    f:"💡 Le carton souillé ne peut plus être recyclé: il rejoint les organiques.", tricky:true },
+
+  // ── ORDURES MENAGERES ──
+  { e:'🩹', n:"Coton tige",                 c:'menager',
+    d:"Les cotons tiges → <b>ordures ménagères</b>.",
+    f:"💡 Préférez les cotons tiges en bambou compostable pour moins de déchets!" },
+  { e:'🤧', n:"Mouchoir en papier usagé",   c:'menager',
+    d:"Les mouchoirs en papier usagés → <b>ordures ménagères</b>. (Pas dans les papiers-cartons!)",
+    f:"💡 Les mouchoirs souillés ne sont pas recyclables. Les serviettes en tissu sont bien meilleures!", tricky:true },
+  { e:'🍕', n:"Carton de pizza SOUILLÉ",    c:'menager',
+    d:"Le carton de pizza gras et souillé → <b>ordures ménagères</b>.",
+    f:"💡 Astuce: si seulement le dessus est souillé, coupez-le. Le fond propre va en conteneur jaune!" },
+  { e:'💡', n:"Ampoule halogène / incandescence", c:'menager',
+    d:"Les ampoules halogènes ou à incandescence → <b>ordures ménagères</b>.",
+    f:"💡 Contrairement aux LED, elles ne contiennent pas de composants électroniques dangereux!" },
+  { e:'💿', n:"CD / DVD",                   c:'menager',
+    d:"Les CD et DVD (et leurs boîtiers) → <b>ordures ménagères</b>.",
+    f:"💡 Les CD sont faits de polycarbonate + alu: ce mélange n'est pas recyclable en PMC." },
+  { e:'👶', n:"Couche bébé usagée",         c:'menager',
+    d:"Les couches bébé usagées → <b>ordures ménagères</b>.",
+    f:"💡 Les couches lavables peuvent réduire les déchets bébé de 90%!" },
+  { e:'🌸', n:"Bouteille de parfum PLEINE", c:'menager',
+    d:"La bouteille de parfum PLEINE ou à moitié pleine → <b>ordures ménagères</b>. (Pas dans le verre!)",
+    f:"💡 La bouteille VIDE, elle, va bien dans la bulle à verre.", tricky:true },
+  { e:'🍟', n:"Tube chips rond (Pringles…)", c:'menager',
+    d:"Le tube rond de chips (type Pringles) → <b>ordures ménagères</b>. (Multi-matière, non recyclable!)",
+    f:"💡 Le SACHET PLAT de chips va en PMC. Le TUBE ROND (carton+métal+plastique) va en ménager!", tricky:true },
+  { e:'🛍️', n:"Sachet café (emballage multi-couches)", c:'menager',
+    d:"L'emballage de café (multi-couches alu+plastique) → <b>ordures ménagères</b>.",
+    f:"💡 Les emballages multi-couches complexes (café, thé, confiserie) ne sont pas recyclables actuellement." },
+  { e:'🌱', n:"Capsule plastique 'biodégradable'", c:'menager',
+    d:"Les capsules en plastique dit 'biodégradable' → <b>ordures ménagères</b>. Pas dans les organiques!",
+    f:"💡 'Biodégradable' ≠ compostable à la maison! Ces plastiques perturbent le compostage industriel.", tricky:true },
+  { e:'🧻', n:"Rouleau de papier toilette (carton)", c:'papier',
+    d:"Le tube en carton du papier WC → <b>conteneur jaune / collecte papier</b>.",
+    f:"💡 Un simple tube en carton vaut mieux recyclé que jeté en ménager!" },
+  { e:'📦', n:"Emballage beurre aluminisé", c:'menager',
+    d:"L'emballage de beurre EN PAPIER ALUMINISÉ → <b>ordures ménagères</b>.",
+    f:"💡 Différence: papier aluminisé → ménager; papier paraffiné (blanc) → organiques!", tricky:true },
+  { e:'🎞️', n:"Film alimentaire (cellophane)", c:'menager',
+    d:"Le film alimentaire (cellophane, film étirable) → <b>ordures ménagères</b>.",
+    f:"💡 Trop fin et extensible pour être recyclé. Préférez des contenants réutilisables!" },
+
+  // ── RECYPARC ──
+  { e:'🔋', n:"Pile usagée",               c:'recyparc',
+    d:"Les piles usagées → <b>Recyparc</b> ou point de collecte (supermarchés, pharmacies).",
+    f:"💡 Les piles contiennent des métaux lourds très polluants: JAMAIS dans la poubelle normale!" },
+  { e:'💡', n:"Ampoule LED",               c:'recyparc',
+    d:"Les ampoules LED → <b>Recyparc</b> (conteneur DEEE – équipements électroniques).",
+    f:"💡 Les LED contiennent des composants électroniques recyclables. L'halogène, elle, va en ménager!", tricky:true },
+  { e:'💊', n:"Médicaments périmés",        c:'recyparc',
+    d:"Les médicaments périmés → <b>pharmacie</b> ou <b>Recyparc</b>.",
+    f:"💡 Ne jetez JAMAIS des médicaments dans les toilettes ou la poubelle normale!" },
+  { e:'📱', n:"Vieux smartphone",           c:'recyparc',
+    d:"Les smartphones et appareils électroniques → <b>Recyparc</b> (conteneur DEEE).",
+    f:"💡 Un smartphone contient plus de 60 métaux différents, dont des terres rares très précieuses!" },
+  { e:'🎨', n:"Peinture (même sèche)",      c:'recyparc',
+    d:"La peinture (liquide ou sèche) → <b>Recyparc</b> dans les DSM (déchets spéciaux ménagers).",
+    f:"💡 DSM = Déchets Spéciaux des Ménages. Même si le pot est vide et sec!" },
+  { e:'🚗', n:"Batterie de voiture",        c:'recyparc',
+    d:"La batterie de voiture → <b>Recyparc</b> dans les DSM (très dangereux).",
+    f:"💡 Elle contient de l'acide sulfurique. Manipulation avec précaution obligatoire!" },
+  { e:'🖨️', n:"Cartouche d'encre",         c:'recyparc',
+    d:"Les cartouches d'encre → <b>Recyparc</b> dans les DSM.",
+    f:"💡 Certains magasins (Bureau Vallée, Fnac…) reprennent gratuitement les cartouches!" },
+  { e:'🔥', n:"Détecteur de fumée",         c:'recyparc',
+    d:"Le détecteur de fumée → <b>Recyparc</b> dans les DEEE (électronique).",
+    f:"💡 Il contient une petite source radioactive (Américium-241) qui doit être traitée correctement!" },
+  { e:'💻', n:"Vieux ordinateur portable",  c:'recyparc',
+    d:"Les ordinateurs portables → <b>Recyparc</b> dans les DEEE.",
+    f:"💡 La batterie lithium d'un PC peut exploser si elle est endommagée. Toujours au Recyparc!" },
+  { e:'🧪', n:"Produit d'entretien chimique", c:'recyparc',
+    d:"Les produits chimiques d'entretien (déboucheur, acide…) → <b>Recyparc</b> dans les DSM.",
+    f:"💡 Reconnaissable au pictogramme de danger sur l'emballage." },
+
+  // ── BONUS ──
+  { e:'⭐', n:"🎉 BONUS!",  c:'bonus', isBonus:true, d:"Points bonus!", f:"💡 Vous êtes un champion du tri!" },
+  { e:'🎊', n:"⚡ SUPER BONUS!", c:'bonus', isBonus:true, d:"Combo × 2 pour 3 rounds!", f:"💡 Continuez comme ça!" },
+];
+
+const FUN_FACTS = [
+  "💡 La Belgique recycle 70% de ses déchets ménagers, l'une des meilleures performances mondiales!",
+  "💡 Les Belges trient en moyenne dans 4 flux de collecte différents!",
+  "💡 Recycler une bouteille d'alu économise l'énergie pour alimenter un téléviseur pendant 3 heures!",
+  "💡 Le plastique met entre 100 et 1000 ans pour se décomposer dans la nature.",
+  "💡 Les DEEE (déchets électroniques) sont les déchets qui augmentent le plus vite dans le monde!",
+  "💡 Un Belge produit en moyenne 450 kg de déchets ménagers par an.",
+  "💡 Le compostage des déchets organiques réduit les émissions de méthane des décharges.",
+  "💡 En Belgique, le sac PMC existe depuis 1994 – une des premières initiatives de ce type en Europe!",
+];
+
+/* ════════════════════════════════════════════
+   GAME STATE
+════════════════════════════════════════════ */
+const G = {
+  score:0, high: +(localStorage.getItem('tritour_best')||0),
+  lives:3, combo:1, bestCombo:1,
+  total:0, correct:0,
+  spinning:false, answering:false,
+  item:null,
+  timerInt:null, timerSec:15,
+  bonusMult:1, bonusLeft:0,
+  wheelAngle:0, wheelItems:[],
+};
+
+/* ════════════════════════════════════════════
+   BACKGROUND FLOATERS
+════════════════════════════════════════════ */
+function initBg(){
+  const bg = document.getElementById('bgFloat');
+  const icons = ['♻️','🔵','🟡','🟢','🟤','⚫','🔴','🥫','📦','🍾','🍃','🔋'];
+  for(let i=0;i<18;i++){
+    const s = document.createElement('span');
+    s.textContent = icons[i%icons.length];
+    s.style.left = Math.random()*100+'vw';
+    s.style.animationDuration = (12+Math.random()*20)+'s';
+    s.style.animationDelay = (-Math.random()*25)+'s';
+    bg.appendChild(s);
+  }
+}
+
+/* ════════════════════════════════════════════
+   CANVAS WHEEL
+════════════════════════════════════════════ */
+const cv = document.getElementById('wheelCanvas');
+const cx = cv.getContext('2d');
+const N_SEG = 16;
+
+function resizeWheel(){
+  const sz = Math.min(380, window.innerWidth * 0.84);
+  cv.width = cv.height = sz;
+}
+
+function pickWheelItems(){
+  // Distribution: PMC×4, papier×2, verre×2, organique×3, menager×2, recyparc×2, bonus×1
+  const dist = ['pmc','pmc','pmc','pmc','papier','papier','verre','verre',
+                'organique','organique','organique','menager','menager','recyparc','recyparc','bonus'];
+  const used = new Set();
+  const out = [];
+  for(const cat of dist){
+    const pool = ITEMS.filter(x=>x.c===cat && !used.has(x.n));
+    if(pool.length){
+      const it = pool[Math.floor(Math.random()*pool.length)];
+      out.push(it); used.add(it.n);
+    }
+  }
+  // Shuffle Fisher-Yates
+  for(let i=out.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [out[i],out[j]]=[out[j],out[i]];
+  }
+  G.wheelItems = out;
+}
+
+function lighten(hex,amt){
+  const n=parseInt(hex.replace('#',''),16);
+  const r=Math.min(255,(n>>16)+amt);
+  const g=Math.min(255,((n>>8)&0xff)+amt);
+  const b=Math.min(255,(n&0xff)+amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawWheel(){
+  const w=cv.width, h=cv.height, r=w/2-6;
+  const items=G.wheelItems; const n=items.length;
+  const arc=2*Math.PI/n;
+  cx.clearRect(0,0,w,h);
+
+  // Outer glow
+  const glo=cx.createRadialGradient(w/2,h/2,r-20,w/2,h/2,r+6);
+  glo.addColorStop(0,'rgba(255,215,0,0)');
+  glo.addColorStop(1,'rgba(255,215,0,0.18)');
+  cx.beginPath(); cx.arc(w/2,h/2,r+6,0,2*Math.PI);
+  cx.fillStyle=glo; cx.fill();
+
+  for(let i=0;i<n;i++){
+    const it=items[i];
+    const cat=CAT[it.c];
+    const sa=G.wheelAngle+i*arc;
+    const ea=sa+arc;
+    const ma=sa+arc/2;
+
+    // Segment
+    cx.beginPath(); cx.moveTo(w/2,h/2);
+    cx.arc(w/2,h/2,r,sa,ea); cx.closePath();
+    const sg=cx.createRadialGradient(
+      w/2+(r*.5)*Math.cos(ma), h/2+(r*.5)*Math.sin(ma), 0,
+      w/2, h/2, r
+    );
+    sg.addColorStop(0, lighten(cat.color,25));
+    sg.addColorStop(1, cat.color);
+    cx.fillStyle=sg; cx.fill();
+    cx.strokeStyle='rgba(255,255,255,0.25)'; cx.lineWidth=1.5; cx.stroke();
+
+    // Text
+    cx.save();
+    cx.translate(w/2,h/2); cx.rotate(ma);
+    const td=r*0.63;
+    // Emoji
+    cx.font=`${Math.max(14,r*.095)}px serif`;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    cx.fillText(it.e, td, 0);
+    // Name
+    const fs=Math.max(7.5,r*.046);
+    cx.font=`bold ${fs}px Arial`;
+    cx.fillStyle='rgba(255,255,255,0.92)';
+    cx.shadowColor='rgba(0,0,0,.9)'; cx.shadowBlur=4;
+    const short=it.n.length>13?it.n.slice(0,12)+'…':it.n;
+    cx.fillText(short, td*1.38, 0);
+    cx.restore();
+  }
+
+  // Center disc
+  const cg=cx.createRadialGradient(w/2,h/2,0,w/2,h/2,34);
+  cg.addColorStop(0,'#fff8e1'); cg.addColorStop(1,'#ff8c00');
+  cx.beginPath(); cx.arc(w/2,h/2,34,0,2*Math.PI);
+  cx.fillStyle=cg; cx.fill();
+  cx.strokeStyle='rgba(255,255,255,0.8)'; cx.lineWidth=3; cx.stroke();
+  // Center icon
+  cx.font='20px serif'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.shadowBlur=0; cx.fillText('♻️',w/2,h/2);
+
+  // Outer ring
+  cx.beginPath(); cx.arc(w/2,h/2,r,0,2*Math.PI);
+  cx.strokeStyle='rgba(255,255,255,0.45)'; cx.lineWidth=3; cx.stroke();
+
+  // Tick marks between segments
+  for(let i=0;i<n;i++){
+    const a=G.wheelAngle+i*arc;
+    cx.save(); cx.translate(w/2,h/2); cx.rotate(a);
+    cx.beginPath(); cx.moveTo(r-8,0); cx.lineTo(r+4,0);
+    cx.strokeStyle='rgba(255,255,255,0.55)'; cx.lineWidth=2; cx.stroke();
+    cx.restore();
+  }
+}
+
+/* ════════════════════════════════════════════
+   SPIN
+════════════════════════════════════════════ */
+function spinWheel(){
+  if(G.spinning||G.answering) return;
+  G.spinning=true;
+  document.getElementById('spinBtn').disabled=true;
+  document.getElementById('spinBtn').classList.add('active');
+  document.getElementById('itemCard').classList.remove('show');
+
+  disableBins();
+  snd('spin');
+
+  const spins = 5+Math.random()*6;
+  const target = G.wheelAngle + spins*2*Math.PI + Math.random()*2*Math.PI;
+  const dur = 3200+Math.random()*2000;
+  const t0 = performance.now();
+  const a0 = G.wheelAngle;
+
+  // Tick sound timing
+  const arc=2*Math.PI/N_SEG;
+  let lastTick=-1;
+
+  function frame(ts){
+    const p=Math.min((ts-t0)/dur,1);
+    const ease=1-Math.pow(1-p,4); // ease-out quartic
+    G.wheelAngle = a0+(target-a0)*ease;
+
+    // Tick on each segment boundary as it slows
+    const normA=((G.wheelAngle%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+    const tick=Math.floor(normA/arc);
+    if(tick!==lastTick){ snd('tick'); lastTick=tick; }
+
+    drawWheel();
+    if(p<1){ requestAnimationFrame(frame); }
+    else{ G.wheelAngle=target%(2*Math.PI); drawWheel(); onSpinEnd(); }
+  }
+  requestAnimationFrame(frame);
+}
+
+function onSpinEnd(){
+  G.spinning=false;
+  document.getElementById('spinBtn').classList.remove('active');
+  snd('tick');
+
+  const arc=2*Math.PI/N_SEG;
+  const ptr=3*Math.PI/2; // pointer at top
+  const norm=((G.wheelAngle%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+  const rel=((ptr-norm)+2*Math.PI)%(2*Math.PI);
+  const idx=Math.floor(rel/arc)%N_SEG;
+  const item=G.wheelItems[idx];
+
+  if(item.isBonus){ showBonus(item); }
+  else { showItem(item); }
+
+  setTimeout(()=>{ pickWheelItems(); },6000);
+}
+
+/* ════════════════════════════════════════════
+   SHOW ITEM
+════════════════════════════════════════════ */
+function showItem(item){
+  G.item=item; G.answering=true;
+  document.getElementById('itemEmoji').textContent=item.e;
+  document.getElementById('itemName').textContent=item.n;
+  document.getElementById('itemSub').textContent='Dans quelle poubelle dois-je aller?';
+  document.getElementById('trickyBadge').style.display=item.tricky?'inline-block':'none';
+  const card=document.getElementById('itemCard');
+  card.style.borderColor=CAT[item.c].color+'77';
+  card.classList.add('show');
+  document.getElementById('timerWrap').style.display='block';
+  startTimer();
+  enableBins();
+}
+
+/* ════════════════════════════════════════════
+   BONUS
+════════════════════════════════════════════ */
+function showBonus(item){
+  const isMulti=Math.random()>.45;
+  if(isMulti){
+    G.bonusMult=2; G.bonusLeft=3;
+    document.getElementById('bonusText').innerHTML='✨ <b>Combo multiplié par ×2</b> pour les 3 prochains rounds!';
+  } else {
+    const pts=200+Math.floor(Math.random()*3)*100;
+    addScore(pts);
+    document.getElementById('bonusText').innerHTML=`🎁 <b>+${pts} points</b> gratuits!`;
+  }
+  document.getElementById('bonusPop').classList.add('show');
+  snd('bonus');
+  updateUI();
+  pickWheelItems();
+}
+function closeBonus(){
+  document.getElementById('bonusPop').classList.remove('show');
+  document.getElementById('spinBtn').disabled=false;
+}
+
+/* ════════════════════════════════════════════
+   TIMER
+════════════════════════════════════════════ */
+function startTimer(){
+  clearInterval(G.timerInt);
+  G.timerSec=15;
+  updateTimer();
+  G.timerInt=setInterval(()=>{
+    G.timerSec--;
+    updateTimer();
+    if(G.timerSec<=0){ clearInterval(G.timerInt); timeUp(); }
+  },1000);
+}
+function updateTimer(){
+  document.getElementById('timerFill').style.width=(G.timerSec/15*100)+'%';
+  document.getElementById('timerSecs').textContent=G.timerSec+'s';
+}
+function timeUp(){
+  disableBins(); G.answering=false;
+  G.combo=1; G.bonusMult=1; G.bonusLeft=0;
+  updateUI();
+  loseLife();
+  showFeedback(false,'⏱️','Trop lent!');
+}
+
+/* ════════════════════════════════════════════
+   BIN PICK
+════════════════════════════════════════════ */
+function pickBin(cat){
+  if(!G.answering) return;
+  clearInterval(G.timerInt);
+  disableBins(); G.answering=false;
+  G.total++;
+
+  const right=cat===G.item.c;
+  const selBin=document.getElementById('bin-'+cat);
+  const rightBin=document.getElementById('bin-'+G.item.c);
+
+  if(right){
+    selBin.classList.add('correct');
+    G.correct++;
+    const timeBonus=G.timerSec*8;
+    const base=100;
+    const comboBonus=base*(G.combo-1)*0.5;
+    const pts=Math.floor((base+timeBonus+comboBonus)*G.bonusMult);
+    addScore(pts);
+    G.combo=Math.min(G.combo+1,8);
+    if(G.combo>G.bestCombo) G.bestCombo=G.combo;
+    if(G.bonusLeft>0){ G.bonusLeft--; if(!G.bonusLeft) G.bonusMult=1; }
+    updateUI();
+    showComboPop(G.combo, pts);
+    particles(cv.getBoundingClientRect());
+    snd('correct');
+    setTimeout(()=>showFeedback(true,'✅',['Excellent! 🎉','Parfait! 👏','Super! ⭐','Bravo! 🏆','Génial! 💪'][Math.floor(Math.random()*5)]),400);
+  } else {
+    selBin.classList.add('wrong');
+    rightBin.classList.add('reveal');
+    G.combo=1; G.bonusMult=1; G.bonusLeft=0;
+    updateUI(); loseLife(); snd('wrong');
+    setTimeout(()=>showFeedback(false,'❌',['Dommage! 🤔','Pas tout à fait! 💭','Oups! 😅'][Math.floor(Math.random()*3)]),400);
+  }
+
+  document.getElementById('itemCard').classList.remove('show');
+  document.getElementById('timerWrap').style.display='none';
+}
+
+function loseLife(){
+  G.lives--;
+  updateUI();
+  if(G.lives<=0) setTimeout(()=>{
+    if(!document.getElementById('feedModal').classList.contains('show')) showGameOver();
+  },2000);
+}
+
+/* ════════════════════════════════════════════
+   FEEDBACK MODAL
+════════════════════════════════════════════ */
+function showFeedback(right, emoji, title){
+  const item=G.item;
+  const cat=CAT[item.c];
+  document.getElementById('fbEmoji').textContent=emoji;
+  document.getElementById('fbTitle').textContent=title;
+  document.getElementById('fbDesc').innerHTML= right
+    ? `<b>${item.n}</b> va bien dans <b style="color:${cat.color}">${cat.icon} ${cat.label}</b>!<br><br><small style="opacity:.7">${item.d}</small>`
+    : `<b>${item.n}</b> doit aller dans <b style="color:${cat.color}">${cat.icon} ${cat.label}</b>!<br><br><small style="opacity:.7">${item.d}</small>`;
+  const fact = item.f || FUN_FACTS[Math.floor(Math.random()*FUN_FACTS.length)];
+  document.getElementById('fbFact').textContent=fact;
+  const modal=document.getElementById('feedModal');
+  modal.className='modal show '+(right?'correct-modal':'wrong-modal');
+  document.getElementById('backdrop').classList.add('show');
+}
+
+function closeFeedback(){
+  document.getElementById('feedModal').classList.remove('show');
+  document.getElementById('backdrop').classList.remove('show');
+  document.querySelectorAll('.bin').forEach(b=>b.className='bin disabled');
+  if(G.lives<=0){ showGameOver(); return; }
+  document.getElementById('spinBtn').disabled=false;
+  pickWheelItems(); drawWheel();
+}
+
+/* ════════════════════════════════════════════
+   SCORE & UI
+════════════════════════════════════════════ */
+function addScore(pts){
+  G.score+=pts;
+  if(G.score>G.high){ G.high=G.score; localStorage.setItem('tritour_best',G.high); }
+}
+
+function updateUI(){
+  document.getElementById('scoreVal').textContent=G.score.toLocaleString('fr-BE');
+  document.getElementById('highVal').textContent=G.high.toLocaleString('fr-BE');
+
+  const cv2=document.getElementById('comboVal');
+  cv2.textContent=`×${G.combo}`;
+  cv2.className='val'+(G.combo>=4?' hot':'');
+
+  const lv=document.getElementById('livesVal');
+  lv.textContent='❤️'.repeat(Math.max(0,G.lives))+'🖤'.repeat(Math.max(0,3-G.lives));
+
+  const bc=document.getElementById('bonusChip');
+  if(G.bonusLeft>0){
+    bc.style.display='block';
+    document.getElementById('bonusRoundsVal').textContent=`×2 (${G.bonusLeft})`;
+  } else { bc.style.display='none'; }
+}
+
+function enableBins(){ document.querySelectorAll('.bin').forEach(b=>b.classList.remove('disabled')); }
+function disableBins(){ document.querySelectorAll('.bin').forEach(b=>b.classList.add('disabled')); }
+
+function showComboPop(combo, pts){
+  if(combo<2) return;
+  const el=document.createElement('div');
+  el.className='combo-pop';
+  el.style.top=(window.innerHeight*0.35)+'px';
+  el.textContent=combo>=5?`🔥 ×${combo} COMBO! +${pts}pts`:`×${combo} Combo! +${pts}pts`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+/* ════════════════════════════════════════════
+   PARTICLES
+════════════════════════════════════════════ */
+function particles(rect){
+  const emojis=['✨','⭐','💫','♻️','🎉','🌟','💚'];
+  for(let i=0;i<14;i++){
+    const p=document.createElement('div');
+    p.className='pt';
+    p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    p.style.left=(rect.left+rect.width/2)+'px';
+    p.style.top=(rect.top+rect.height/2)+'px';
+    const tx=(Math.random()-.5)*450, ty=(Math.random()-.5)*400;
+    p.style.setProperty('--tx',tx+'px');
+    p.style.setProperty('--ty',ty+'px');
+    p.style.animationDelay=(Math.random()*.25)+'s';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),1200);
+  }
+}
+
+/* ════════════════════════════════════════════
+   AUDIO (Web Audio API)
+════════════════════════════════════════════ */
+let actx=null;
+function getACtx(){ return actx||(actx=new(window.AudioContext||window.webkitAudioContext)()); }
+
+function snd(type){
+  try{
+    const a=getACtx();
+    const def={
+      spin:   {f:180, t:'sine',    d:.06, g:.08},
+      tick:   {f:480, t:'sine',    d:.07, g:.07},
+      correct:{f:[523,659,784,1047],t:'sine',d:.12,g:.15},
+      wrong:  {f:160, t:'sawtooth',d:.28, g:.12},
+      bonus:  {f:[523,659,784,1047,1319],t:'sine',d:.15,g:.2},
+    };
+    const s=def[type];
+    if(!s) return;
+    if(Array.isArray(s.f)){
+      s.f.forEach((freq,i)=>{
+        const o=a.createOscillator(), g=a.createGain();
+        o.connect(g); g.connect(a.destination);
+        o.type=s.t; o.frequency.value=freq;
+        const st=a.currentTime+i*s.d;
+        g.gain.setValueAtTime(s.g,st);
+        g.gain.exponentialRampToValueAtTime(.001,st+s.d*.95);
+        o.start(st); o.stop(st+s.d);
+      });
+    } else {
+      const o=a.createOscillator(), g=a.createGain();
+      o.connect(g); g.connect(a.destination);
+      o.type=s.t; o.frequency.value=s.f;
+      g.gain.setValueAtTime(s.g,a.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001,a.currentTime+s.d);
+      o.start(); o.stop(a.currentTime+s.d);
+    }
+  }catch(_){}
+}
+
+/* ════════════════════════════════════════════
+   GAME OVER
+════════════════════════════════════════════ */
+function showGameOver(){
+  const acc=G.total>0?Math.round(G.correct/G.total*100):0;
+  document.getElementById('goScore').textContent=G.score.toLocaleString('fr-BE')+' pts';
+  document.getElementById('goHigh').textContent=G.high.toLocaleString('fr-BE');
+  document.getElementById('goAccuracy').textContent=acc+'%';
+  document.getElementById('goCombo').textContent='×'+G.bestCombo;
+  document.getElementById('goQuestions').textContent=G.total;
+  document.getElementById('gameOver').classList.add('show');
+}
+
+function restartGame(){
+  Object.assign(G,{
+    score:0, lives:3, combo:1, bestCombo:1,
+    total:0, correct:0, spinning:false, answering:false,
+    item:null, timerSec:15, bonusMult:1, bonusLeft:0, wheelAngle:0,
+  });
+  clearInterval(G.timerInt);
+  document.getElementById('gameOver').classList.remove('show');
+  document.getElementById('itemCard').classList.remove('show');
+  document.getElementById('timerWrap').style.display='none';
+  document.getElementById('spinBtn').disabled=false;
+  disableBins();
+  pickWheelItems(); updateUI(); drawWheel();
+}
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+function startGame(){
+  document.getElementById('tutorial').style.display='none';
+  resizeWheel(); pickWheelItems(); drawWheel(); updateUI(); initBg();
+}
+
+window.addEventListener('resize',()=>{
+  if(document.getElementById('tutorial').style.display==='none'){
+    resizeWheel(); drawWheel();
+  }
+});
+</script>
+</body>
+</html>
